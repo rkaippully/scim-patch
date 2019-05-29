@@ -8,5 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+- Parse SCIM paths and use it for patching
 
-[Unreleased]: https://github.com/rkaippully/clj-annotations/compare/0.0.0...HEAD
+[Unreleased]: https://github.com/rkaippully/scim-patch/compare/0.0.0...HEAD
