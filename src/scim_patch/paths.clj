@@ -9,7 +9,13 @@
 (defn parse
   [path]
   (try
-    (path-parser path)
+    (let [result (path-parser path)]
+      (if (p/failure? result)
+        (throw (ex-info (str "Invalid path: " path) {:status      400
+                                                     :scimType    :invalidPath
+                                                     :parse-error (p/get-failure
+                                                                    result)}))
+        result))
     (catch Exception e
       (throw (ex-info (str "Invalid path: " path) {:status 400 :scimType :invalidPath} e)))))
 

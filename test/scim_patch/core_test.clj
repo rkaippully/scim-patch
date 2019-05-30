@@ -46,6 +46,25 @@
                     {:type         :string
                      :multi-valued true}}}}}}}}})
 
+(deftest multiple-ops
+  (testing "multiple operations in one patch"
+    (is (= {:userName "foo"
+            :name     {:formatted "bar"}}
+          (sut/patch schema {} [{:op    "add"
+                                 :path  "userName"
+                                 :value "foo"}
+                                {:op    "add"
+                                 :path  "name.formatted"
+                                 :value "bar"}])))))
+
+(deftest filter-parse-failure
+  (testing "syntax error in value filter"
+    (is (= {:status 400 :scimType :invalidPath}
+          (try
+            (sut/patch schema {} {:op "add" :path "phoneNumbers[type or value]"})
+            (catch ExceptionInfo e
+              (ex-data e)))))))
+
 (deftest op-add-attr-path-level-1
   (testing "add operation, no filter, single valued, level 1"
     (is (= {:userName "bar"}
@@ -200,13 +219,105 @@
              :path  "phoneNumbers[type ew \"rk\"]"
              :value {:type "Work" :value "3334445555"}})))))
 
-(deftest multiple-ops
-  (testing "multiple operations in one patch"
-    (is (= {:userName "foo"
-            :name     {:formatted "bar"}}
-          (sut/patch schema {} [{:op    "add"
-                                 :path  "userName"
-                                 :value "foo"}
-                                {:op    "add"
-                                 :path  "name.formatted"
-                                 :value "bar"}])))))
+(deftest op-remove-missing-path
+  (testing "remove operation: missing path"
+    (is (= {:status 400 :scimType :noTarget}
+          (try
+            (sut/patch schema {} {:op "remove"})
+            (catch ExceptionInfo e
+              (ex-data e))))))
+
+  (testing "remove operation: blank path"
+    (is (= {:status 400 :scimType :noTarget}
+          (try
+            (sut/patch schema {} {:op "remove" :path "     "})
+            (catch ExceptionInfo e
+              (ex-data e)))))))
+
+(deftest op-remove-single-valued-attribute
+  (testing "remove operation: single valued attribute, level 1"
+    (is (= {:name {:formatted "bar"}}
+          (sut/patch schema {:userName "foo"
+                             :name     {:formatted "bar"}}
+            {:op   "remove"
+             :path "userName"}))))
+
+  (testing "remove operation: single valued attribute, level 2"
+    (is (= {:userName "foo" :name {}}
+          (sut/patch schema {:userName "foo"
+                             :name     {:formatted "bar"}}
+            {:op   "remove"
+             :path "name.formatted"}))))
+
+  (testing "remove operation: single valued attribute, level 3"
+    (is (= {:userName "foo" :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {}}}
+          (sut/patch schema {:userName "foo"
+                             :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:displayName "Eddie Brock"}}}
+            {:op   "remove"
+             :path "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName"})))))
+
+(deftest op-multi-valued-no-filter
+  (testing "remove operation: multi valued attribute, level 1"
+    (is (= {:userName "foo"}
+          (sut/patch schema {:userName     "foo"
+                             :phoneNumbers [{:value "555-555-5555"
+                                             :type  "work"}
+                                            {:value "555-555-4444"
+                                             :type  "mobile"}]}
+            {:op    "remove"
+             :path  "phoneNumbers"}))))
+
+  (testing "remove operation: multi valued attribute, level 2"
+    (is (= {:userName "foo" :name {}}
+          (sut/patch schema {:userName "foo"
+                             :name {:honorificPrefix ["Mr." "Dr."]}}
+            {:op    "remove"
+             :path  "name.honorificPrefix"}))))
+
+  (testing "remove operation: multi valued attribute, level 3"
+    (is (= {:userName "foo" :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {}}}
+          (sut/patch schema {:userName "foo"
+                             :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:emails ["test1@example.com" "test2@example.com"]}}
+}
+            {:op    "remove"
+             :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.emails"})))))
+
+(deftest op-remove-multi-valued-with-filter
+
+  (testing "remove operation: multi valued attribute, value filter"
+    (is (= {:userName     "foo"
+            :phoneNumbers [{:value "555-555-4444"
+                            :type  "mobile"}]}
+          (sut/patch schema {:userName     "foo"
+                             :phoneNumbers [{:value "555-555-5555"
+                                             :type  "work"}
+                                            {:value "555-555-4444"
+                                             :type  "mobile"}]}
+            {:op   "remove"
+             :path "phoneNumbers[type eq \"work\"]"}))))
+
+  (testing "remove operation: multi valued attribute, value filter, complex conditions"
+    (is (= {:userName     "foo"
+            :phoneNumbers [{:value "555-555-4444"
+                            :type  "mobile"}]}
+          (sut/patch schema {:userName     "foo"
+                             :phoneNumbers [{:value "555-555-5555"
+                                             :type  "work"}
+                                            {:value "555-555-4444"
+                                             :type  "mobile"}
+                                            {:value "111-222-3333"
+                                             :type  "other"}]}
+            {:op   "remove"
+             :path "phoneNumbers[type eq \"work\" or not (value ew \"444\")]"}))))
+
+  (testing "remove operation: multi valued attribute, value filter, all values removed"
+    (is (= {:userName "foo"}
+          (sut/patch schema {:userName     "foo"
+                             :phoneNumbers [{:value "555-555-5555"
+                                             :type  "work"}
+                                            {:value "555-555-4444"
+                                             :type  "mobile"}
+                                            {:value "111-555-3333"
+                                             :type  "other"}]}
+            {:op   "remove"
+             :path "phoneNumbers[value co \"-555-\"]"})))))
