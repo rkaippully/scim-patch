@@ -10,6 +10,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 - Parse SCIM paths and use it for patching
-- Support add and remove operations
+- Support add, remove, and replace operations
 
 [Unreleased]: https://github.com/rkaippully/scim-patch/compare/0.0.0...HEAD

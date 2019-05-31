@@ -43,7 +43,7 @@
           (handle-attr-path schema resource uri attr subattr
             (partial value-path-fn value value-filter subattr2)))))))
 
-(defn add-value
+(defn value-for-add
   [schema old-val new-val]
   (if (:multi-valued schema)
     (if (and (sequential? new-val)
@@ -66,14 +66,14 @@
             (throw (ex-info (str "Invalid path element: " subattr)
                      {:status   400
                       :scimType :invalidPath})))
-          (update old-val subattr-key #(add-value schema' % new-val))))
+          (update old-val subattr-key #(value-for-add schema' % new-val))))
       old-val)))
 
 (defn op-add
   [schema resource opr]
   (letfn [(add-attr-path
             [value res attr sch]
-            (update res (keyword attr) #(add-value sch % value)))
+            (update res (keyword attr) #(value-for-add sch % value)))
 
           (add-value-path
             [value value-filter subattr res attr sch]
@@ -125,14 +125,65 @@
 
     (handle-operation schema resource opr remove-attr-path remove-value-path)))
 
+(defn value-for-replace
+  [schema value]
+  (when (and (:multi-valued schema) (not (sequential? value)))
+    (throw (ex-info "Invalid value for multivalued attribute"
+             {:status   400
+              :scimType :invalidValue})))
+  value)
+
+(defn filter-and-replace
+  [schema new-val value-filter subattr]
+  (fn [{:keys [value replaced?]} old-val]
+    (if (fltr/match-filter? schema value-filter old-val)
+      {:replaced? true
+       :value     (conj value
+                    (if (s/blank? subattr)
+                      new-val
+                      (let [subattr-key (keyword subattr)
+                            schema'     (get-in schema [:type :attributes subattr-key])]
+                        (when (nil? schema')
+                          (throw (ex-info (str "Invalid path element: " subattr)
+                                   {:status   400
+                                    :scimType :invalidPath})))
+                        (assoc old-val subattr-key (value-for-replace schema' new-val)))))}
+
+      ;; Filter did not match
+      {:replaced? replaced? :value (conj value old-val)})))
+
+(defn op-replace
+  [schema resource opr]
+  (letfn [(replace-attr-path
+            [value res attr sch]
+            (assoc res (keyword attr) (value-for-replace sch value)))
+
+          (replace-value-path
+            [value value-filter subattr res attr sch]
+            (when-not (:multi-valued sch)
+              (throw (ex-info "Value filter can only be applied on multivalued attributes"
+                       {:status   400
+                        :scimType :invalidFilter})))
+            (update res (keyword attr)
+              #(let [result (reduce (filter-and-replace sch value value-filter subattr)
+                              {:value [] :replaced? false} %)]
+                 (if (:replaced? result)
+                   (:value result)
+                   (throw (ex-info "No match for replace operation with value filter"
+                            {:status   400
+                             :scimType :noTarget}))))))]
+
+    (handle-operation schema resource opr replace-attr-path replace-value-path)))
+
 (defn patch
   [schema resource op]
   (cond
     ;; single patch operation
     (map? op)
     (case (:op op)
-      "add"    (op-add schema resource op)
-      "remove" (op-remove schema resource op)
+      "add"     (op-add schema resource op)
+      "remove"  (op-remove schema resource op)
+      "replace" (op-replace schema resource op)
       (throw (ex-info (str "Invalid operation: " (:op op)) {:status 400 :scimType :invalidSyntax})))
 
     ;; sequence of operations

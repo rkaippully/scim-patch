@@ -77,12 +77,16 @@
                                  :path  "name.formatted"
                                  :value "bar"}])))))
 
+;;
+;; Add operation
+;;
+
 (deftest op-add-attr-path-level-1
   (testing "add operation, no filter, single valued, level 1"
     (is (= {:userName "bar"}
-          (sut/patch schema {:userName "foo"} {:op    "add"
-                                               :path  "userName"
-                                               :value "bar"}))))
+          (sut/patch schema {} {:op    "add"
+                                :path  "userName"
+                                :value "bar"}))))
 
   (testing "add operation, no filter, multivalued, level 1"
     (is (= {:phoneNumbers [{:value "555-555-5555"
@@ -99,9 +103,9 @@
 (deftest op-add-attr-path-level-2
   (testing "add operation, no filter, single valued, subattribute, level 2"
     (is (= {:name {:formatted "bar"}}
-          (sut/patch schema {:name {:formatted "foo"}} {:op    "add"
-                                                        :path  "name.formatted"
-                                                        :value "bar"}))))
+          (sut/patch schema {} {:op    "add"
+                                :path  "name.formatted"
+                                :value "bar"}))))
 
   (testing "add operation, no filter, single valued, uri, level 2"
     (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "12345"}}
@@ -291,6 +295,11 @@
              :path  "phoneNumbers[index le 2].display"
              :value "111-222-3333"})))))
 
+
+;;
+;; Remove operation
+;;
+
 (deftest op-remove-missing-path
   (testing "remove operation: missing path"
     (is (= {:status 400 :scimType :noTarget}
@@ -324,7 +333,7 @@
             {:op   "remove"
              :path "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName"})))))
 
-(deftest op-multi-valued-no-filter
+(deftest op-remove-multi-valued-no-filter
   (testing "remove operation: multi valued attribute, level 1"
     (is (= {:userName "foo"}
           (sut/patch schema {:userName     "foo"
@@ -345,8 +354,7 @@
   (testing "remove operation: multi valued attribute, level 3"
     (is (= {:userName "foo" :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {}}}
           (sut/patch schema {:userName "foo"
-                             :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:emails ["test1@example.com" "test2@example.com"]}}
-}
+                             :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:emails ["test1@example.com" "test2@example.com"]}}}
             {:op    "remove"
              :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.emails"})))))
 
@@ -412,6 +420,253 @@
               {:op    "remove"
                :path  "phoneNumbers[type eq \"Work\"].display1"}))))))
 
+
+;;
+;; Replace operation
+;;
+
+(deftest op-replace-attr-path-level-1
+  (testing "replace operation, no filter, single valued, level 1"
+    (is (= {:userName "bar"}
+          (sut/patch schema {:userName "foo"} {:op    "replace"
+                                               :path  "userName"
+                                               :value "bar"}))))
+
+  (testing "replace operation, no filter, multivalued, level 1"
+    (is (= {:phoneNumbers [{:value "555-555-5555"
+                            :type  "work"}
+                           {:value "555-555-4444"
+                            :type  "mobile"}]}
+          (sut/patch schema {:phoneNumbers [{:value "111-222-3333"
+                                             :type  "other"}]}
+            {:op    "replace"
+             :path  "phoneNumbers"
+             :value [{:value "555-555-5555"
+                      :type  "work"}
+                     {:value "555-555-4444"
+                      :type  "mobile"}]})))))
+
+(deftest op-replace-attr-path-level-2
+  (testing "replace operation, no filter, single valued, subattribute, level 2"
+    (is (= {:name {:formatted "bar"}}
+          (sut/patch schema {:name {:formatted "foo"}}
+            {:op    "replace"
+             :path  "name.formatted"
+             :value "bar"}))))
+
+  (testing "replace operation, no filter, single valued, uri, level 2"
+    (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "12345"}}
+          (sut/patch schema {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "99999"}}
+            {:op    "replace"
+             :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber"
+             :value "12345"}))))
+
+  (testing "replace operation, no filter, multi-valued, subattribute, level 2"
+    (is (= {:name {:honorificPrefix ["Mr." "Dr."]}}
+          (sut/patch schema {:name {:honorificPrefix ["Ms."]}}
+            {:op    "replace"
+             :path  "name.honorificPrefix"
+             :value ["Mr." "Dr."]}))))
+
+  (testing "replace operation, no filter, multi-valued, uri, level 2"
+    (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:emails ["test1@example.com" "test2@example.com"]}}
+          (sut/patch schema {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:emails ["test3@example.com"]}}
+            {:op    "replace"
+             :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:emails"
+             :value ["test1@example.com" "test2@example.com"]})))))
+
+(deftest op-replace-attr-path-level-3
+  (testing "replace operation, no filter, single valued, level 3"
+    (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:displayName "Eddie Brock"}}}
+          (sut/patch schema {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:displayName "Peter Parker"}}}
+            {:op    "replace"
+             :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName"
+             :value "Eddie Brock"}))))
+
+  (testing "replace operation, no filter, multi-valued, level 3"
+    (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:emails ["test1@example.com" "test2@example.com"]}}}
+          (sut/patch schema {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:emails ["test3@example.com"]}}}
+            {:op    "replace"
+             :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.emails"
+             :value ["test1@example.com" "test2@example.com"]})))))
+
+(deftest op-replace-no-path
+  (testing "replace operation, no path"
+    (is (= {:userName     "foo"
+            :name         {:formatted "bar"}
+            :phoneNumbers [{:value "555-555-5555"
+                            :type  "work"}
+                           {:value "555-555-4444"
+                            :type  "mobile"}]}
+          (sut/patch schema {:userName     "baz"
+                             :name         {:formatted "qux" :honorificPrefix "Mr."}
+                             :phoneNumbers [{:value "555-555-5555"
+                                             :type  "work"}
+                                            {:value "555-555-4444"
+                                             :type  "mobile"}]}
+            {:op    "replace"
+             :value {:userName "foo"
+                     :name     {:formatted "bar"}}})))))
+
+(deftest op-replace-nonexisting-target-location
+  (testing "replace operation: If the target location does not exist, the attribute and value are added"
+    (is (= {:userName "foo"
+            :name     {:formatted "bar"}}
+          (sut/patch schema {:userName "foo"}
+            {:op    "replace"
+             :path  "name"
+             :value {:formatted "bar"}})))))
+
+(deftest op-replace-attrpath-filter
+  (testing "replace operation: simple attrpath filter"
+    (is (= {:phoneNumbers [{:type "Work" :value "1112223333"}
+                           {:type "Home" :value "3334445555"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type eq \"Home\"]"
+             :value {:type "Home" :value "3334445555"}}))))
+
+  (testing "replace operation: bad attr path"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
+              {:op    "replace"
+               :path  "telephoneNumbers"
+               :value [{:type "Home" :value "3334445555"}]})))))
+
+  (testing "replace operation: bad filter path"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
+              {:op    "replace"
+               :path  "phoneNumbers[number eq 1]"
+               :value [{:type "Home" :value "3334445555"}]})))))
+
+  (testing "replace operation: filter on scalar attribute"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:userName "foo"}
+              {:op    "replace"
+               :path  "userName[number eq 1]"
+               :value "bar"})))))
+
+  (testing "replace operation: attrpath filter with subattr"
+    (is (= {:phoneNumbers [{:type "Work" :value "1112223333"}
+                           {:type "Home" :value "3334445555" :display "333-444-5555"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "3334445555" :display "3334445555"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type eq \"Home\"].display"
+             :value "333-444-5555"}))))
+
+  (testing "replace operation: attrpath filter with bad subattr"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
+              {:op    "replace"
+               :path  "phoneNumbers[type eq \"Work\"].display1"
+               :value "333-444-5555"})))))
+
+  (testing "replace operation: filter with no matches"
+    (is (= {:status 400 :scimType :noTarget}
+          (get-ex-data
+            (sut/patch schema {}
+              {:op    "replace"
+               :path  "phoneNumbers[type eq \"Work\"]"
+               :value {}}))))))
+
+(deftest op-replace-attrpath-filter-operators
+  (testing "replace operation: pr operator"
+    (is (= {:phoneNumbers [{:type "Cell" :value "3334445555" :display "333-444-5555"}
+                           {:type "Home" :value "2223334444"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333" :display "111-222-3333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[display pr]"
+             :value {:type "Cell" :value "3334445555" :display "333-444-5555"}}))))
+
+  (testing "replace operation: ne operator"
+    (is (= {:phoneNumbers [{:type "Work" :value "3334445555"}
+                           {:type "Home" :value "2223334444"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type ne \"Home\"]"
+             :value {:type "Work" :value "3334445555"}}))))
+
+  (testing "replace operation: co operator"
+    (is (= {:phoneNumbers [{:type "Work" :value "3334445555"}
+                           {:type "Home" :value "2223334444"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type co \"or\"]"
+             :value {:type "Work" :value "3334445555"}}))))
+
+  (testing "replace operation: sw operator"
+    (is (= {:phoneNumbers [{:type "Work" :value "3334445555"}
+                           {:type "Home" :value "2223334444"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type sw \"Wo\"]"
+             :value {:type "Work" :value "3334445555"}}))))
+
+  (testing "replace operation: ew operator"
+    (is (= {:phoneNumbers [{:type "Work" :value "3334445555"}
+                           {:type "Home" :value "2223334444"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "2223334444"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[type ew \"rk\"]"
+             :value {:type "Work" :value "3334445555"}}))))
+
+  (testing "replace operation: string operation on non-string value"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:x509Certificates [{:primary true}]}
+              {:op   "replace"
+               :path "x509Certificates[primary co \"true\"]"})))))
+
+  (testing "replace operation: gt operator"
+    (is (= {:phoneNumbers [{:index 1} {:index 2 :display "111-222-3333"}]}
+          (sut/patch schema {:phoneNumbers [{:index 1} {:index 2 :display "1112223333"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[index gt 1].display"
+             :value "111-222-3333"}))))
+
+  (testing "replace operation: ge operator"
+    (is (= {:phoneNumbers [{:index 0}
+                           {:index 1 :display "111-222-3333"}
+                           {:index 2 :display "111-222-3333"}]}
+          (sut/patch schema {:phoneNumbers [{:index 0}
+                                            {:index 1 :display "1112223333"}
+                                            {:index 2 :display "1112223333"}]}
+            {:op    "replace"
+             :path  "phoneNumbers[index ge 1].display"
+             :value "111-222-3333"}))))
+
+  (testing "replace operation: lt operator"
+    (is (= {:phoneNumbers [{:index 1 :display "111-222-3333"} {:index 2}]}
+          (sut/patch schema {:phoneNumbers [{:index 1 :display "1112223333"}
+                                            {:index 2}]}
+            {:op    "replace"
+             :path  "phoneNumbers[index lt 2].display"
+             :value "111-222-3333"}))))
+
+  (testing "replace operation: gt operator"
+    (is (= {:phoneNumbers [{:index 1 :display "111-222-3333"}
+                           {:index 2 :display "111-222-3333"}
+                           {:index 3}]}
+          (sut/patch schema {:phoneNumbers [{:index 1 :display "1112223333"}
+                                            {:index 2 :display "1112223333"}
+                                            {:index 3}]}
+            {:op    "replace"
+             :path  "phoneNumbers[index le 2].display"
+             :value "111-222-3333"})))))
+
+
 ;;
 ;; negative test cases
 ;;
@@ -439,6 +694,11 @@
     (is (= {:status 400 :scimType :invalidValue}
           (get-ex-data
             (sut/patch schema {} {:op    "add"
+                                  :path  "phoneNumbers"
+                                  :value "blah"}))))
+    (is (= {:status 400 :scimType :invalidValue}
+          (get-ex-data
+            (sut/patch schema {} {:op    "replace"
                                   :path  "phoneNumbers"
                                   :value "blah"}))))))
 
