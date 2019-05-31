@@ -1,0 +1,16 @@
+path       := attrPath | valuePath
+valuePath  := attrPath <'['> valFilter <']'> subAttr?
+valFilter  := attrExp | andExp | orExp | notExp | <'('> valFilter <')'>
+attrExp    := (attrPath <' '> presenceOp) | (attrPath <' '> compareOp <' '> compValue)
+andExp     := valFilter <' and '> valFilter
+orExp      := valFilter <' or '> valFilter
+notExp     := <'not'> <' '?> <'('> valFilter <')'>
+compValue  := 'false' | 'null' | 'true' | number | string
+presenceOp := <'pr'>
+compareOp  := 'eq' | 'ne' | 'co' | 'sw' | 'ew' | 'gt' | 'lt' | 'ge' | 'le'
+attrPath   := uri? attrName subAttr?
+uri        := #'[-_.a-zA-Z0-9:]+:'
+<attrName> := #'[a-zA-Z]([-_a-zA-Z0-9])*'
+<subAttr>  := <'.'> attrName
+number     := #'-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?'
+string     := #'"([\x20\x21\x23-\x5b\x5d-\x{10ffff}]|(\\(["\\/|bfnrt]|u\p{XDigit}{4})))*"'
