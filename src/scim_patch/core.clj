@@ -61,7 +61,7 @@
       (if (s/blank? subattr)
         new-val
         (let [subattr-key (keyword subattr)
-              schema'     (get-in schema [:attributes subattr-key])]
+              schema'     (get-in schema [:type :attributes subattr-key])]
           (when (nil? schema')
             (throw (ex-info (str "Invalid path element: " subattr)
                      {:status   400
@@ -93,7 +93,7 @@
       (if (s/blank? subattr)
         acc
         (let [subattr-key (keyword subattr)
-              schema'     (get-in schema [:attributes subattr-key])]
+              schema'     (get-in schema [:type :attributes subattr-key])]
           (when (nil? schema')
             (throw (ex-info (str "Invalid path element: " subattr)
                      {:status   400
@@ -132,7 +132,8 @@
     (map? op)
     (case (:op op)
       "add"    (op-add schema resource op)
-      "remove" (op-remove schema resource op))
+      "remove" (op-remove schema resource op)
+      (throw (ex-info (str "Invalid operation: " (:op op)) {:status 400 :scimType :invalidSyntax})))
 
     ;; sequence of operations
     (sequential? op)

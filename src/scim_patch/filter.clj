@@ -27,13 +27,19 @@
 
 (defn do-compare
   [schema v1 oper v2]
-  (let [v1 (if (number? v1) (bigdec v1) v1)]
+  (let [v1        (if (number? v1) (bigdec v1) v1)
+        string-op (fn [f]
+                    (if (and (string? v1) (string? v2))
+                      (f v1 v2)
+                      (throw (ex-info "Non-string value for string operation"
+                               {:status   400
+                                :scimType :invalidFilter}))))]
     (case (second oper)
       "eq" (= v1 v2)
       "ne" (not= v1 v2)
-      "co" (and (string? v1) (string? v2) (s/includes? v1 v2))
-      "sw" (and (string? v1) (string? v2) (s/starts-with? v1 v2))
-      "ew" (and (string? v1) (string? v2) (s/ends-with? v1 v2))
+      "co" (string-op s/includes?)
+      "sw" (string-op s/starts-with?)
+      "ew" (string-op s/ends-with?)
       "gt" (scim-compare schema v1 v2 pos?)
       "ge" (scim-compare schema v1 v2 #(>= % 0))
       "lt" (scim-compare schema v1 v2 neg?)

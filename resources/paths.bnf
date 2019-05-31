@@ -1,5 +1,5 @@
-path       := attrPath | valuePath subAttr?
-valuePath  := attrPath <'['> valFilter <']'>
+path       := attrPath | valuePath
+valuePath  := attrPath <'['> valFilter <']'> subAttr?
 valFilter  := attrExp | andExp | orExp | notExp | <'('> valFilter <')'>
 attrExp    := (attrPath <' '> presenceOp) | (attrPath <' '> compareOp <' '> compValue)
 andExp     := valFilter <' and '> valFilter

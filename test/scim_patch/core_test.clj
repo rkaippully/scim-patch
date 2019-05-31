@@ -27,6 +27,19 @@
                  :type
                  {:type :string}
                  :primary
+                 {:type :boolean}
+                 :index
+                 {:type :integer}}}}
+
+              :x509Certificates
+              {:multi-valued true
+               :type
+               {:attributes
+                {:value
+                 {:type :binary}
+                 :display
+                 {:type :string}
+                 :primary
                  {:type :boolean}}}}
 
               :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
@@ -46,6 +59,13 @@
                     {:type         :string
                      :multi-valued true}}}}}}}}})
 
+(defmacro get-ex-data
+  [body]
+  `(try
+     ~body
+     (catch ExceptionInfo e#
+       (ex-data e#))))
+
 (deftest multiple-ops
   (testing "multiple operations in one patch"
     (is (= {:userName "foo"
@@ -56,14 +76,6 @@
                                 {:op    "add"
                                  :path  "name.formatted"
                                  :value "bar"}])))))
-
-(deftest filter-parse-failure
-  (testing "syntax error in value filter"
-    (is (= {:status 400 :scimType :invalidPath}
-          (try
-            (sut/patch schema {} {:op "add" :path "phoneNumbers[type or value]"})
-            (catch ExceptionInfo e
-              (ex-data e)))))))
 
 (deftest op-add-attr-path-level-1
   (testing "add operation, no filter, single valued, level 1"
@@ -155,23 +167,44 @@
 
   (testing "add operation: bad attr path"
     (is (= {:status 400 :scimType :invalidPath}
-          (try
+          (get-ex-data
             (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
               {:op    "add"
                :path  "telephoneNumbers"
-               :value [{:type "Home" :value "3334445555"}]})
-            (catch ExceptionInfo e
-              (ex-data e))))))
+               :value [{:type "Home" :value "3334445555"}]})))))
 
   (testing "add operation: bad filter path"
     (is (= {:status 400 :scimType :invalidFilter}
-          (try
+          (get-ex-data
             (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
               {:op    "add"
                :path  "phoneNumbers[number eq 1]"
-               :value [{:type "Home" :value "3334445555"}]})
-            (catch ExceptionInfo e
-              (ex-data e)))))))
+               :value [{:type "Home" :value "3334445555"}]})))))
+
+  (testing "add operation: filter on scalar attribute"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:userName "foo"}
+              {:op    "add"
+               :path  "userName[number eq 1]"
+               :value "bar"})))))
+
+  (testing "add operation: attrpath filter with subattr"
+    (is (= {:phoneNumbers [{:type "Work" :value "1112223333"}
+                           {:type "Home" :value "3334445555" :display "333-444-5555"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}
+                                            {:type "Home" :value "3334445555"}]}
+            {:op    "add"
+             :path  "phoneNumbers[type eq \"Home\"].display"
+             :value "333-444-5555"}))))
+
+  (testing "add operation: attrpath filter with bad subattr"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
+              {:op    "add"
+               :path  "phoneNumbers[type eq \"Work\"].display1"
+               :value "333-444-5555"}))))))
 
 (deftest op-add-attrpath-filter-operators
   (testing "add operation: pr operator"
@@ -217,22 +250,57 @@
                                             {:type "Home" :value "2223334444"}]}
             {:op    "add"
              :path  "phoneNumbers[type ew \"rk\"]"
-             :value {:type "Work" :value "3334445555"}})))))
+             :value {:type "Work" :value "3334445555"}}))))
+
+  (testing "add operation: string operation on non-string value"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:x509Certificates [{:primary true}]}
+              {:op   "add"
+               :path "x509Certificates[primary co \"true\"]"})))))
+
+  (testing "add operation: gt operator"
+    (is (= {:phoneNumbers [{:index 1} {:index 2 :display "111-222-3333"}]}
+          (sut/patch schema {:phoneNumbers [{:index 1} {:index 2}]}
+            {:op    "add"
+             :path  "phoneNumbers[index gt 1].display"
+             :value "111-222-3333"}))))
+
+  (testing "add operation: ge operator"
+    (is (= {:phoneNumbers [{:index 0}
+                           {:index 1 :display "111-222-3333"}
+                           {:index 2 :display "111-222-3333"}]}
+          (sut/patch schema {:phoneNumbers [{:index 0} {:index 1} {:index 2}]}
+            {:op    "add"
+             :path  "phoneNumbers[index ge 1].display"
+             :value "111-222-3333"}))))
+
+  (testing "add operation: lt operator"
+    (is (= {:phoneNumbers [{:index 1 :display "111-222-3333"} {:index 2}]}
+          (sut/patch schema {:phoneNumbers [{:index 1} {:index 2}]}
+            {:op    "add"
+             :path  "phoneNumbers[index lt 2].display"
+             :value "111-222-3333"}))))
+
+  (testing "add operation: gt operator"
+    (is (= {:phoneNumbers [{:index 1 :display "111-222-3333"}
+                           {:index 2 :display "111-222-3333"}
+                           {:index 3}]}
+          (sut/patch schema {:phoneNumbers [{:index 1} {:index 2} {:index 3}]}
+            {:op    "add"
+             :path  "phoneNumbers[index le 2].display"
+             :value "111-222-3333"})))))
 
 (deftest op-remove-missing-path
   (testing "remove operation: missing path"
     (is (= {:status 400 :scimType :noTarget}
-          (try
-            (sut/patch schema {} {:op "remove"})
-            (catch ExceptionInfo e
-              (ex-data e))))))
+          (get-ex-data
+            (sut/patch schema {} {:op "remove"})))))
 
   (testing "remove operation: blank path"
     (is (= {:status 400 :scimType :noTarget}
-          (try
-            (sut/patch schema {} {:op "remove" :path "     "})
-            (catch ExceptionInfo e
-              (ex-data e)))))))
+          (get-ex-data
+            (sut/patch schema {} {:op "remove" :path "     "}))))))
 
 (deftest op-remove-single-valued-attribute
   (testing "remove operation: single valued attribute, level 1"
@@ -308,7 +376,7 @@
                                             {:value "111-222-3333"
                                              :type  "other"}]}
             {:op   "remove"
-             :path "phoneNumbers[type eq \"work\" or not (value ew \"444\")]"}))))
+             :path "phoneNumbers[type eq \"work\" or not (value ew \"444\") and (value pr)]"}))))
 
   (testing "remove operation: multi valued attribute, value filter, all values removed"
     (is (= {:userName "foo"}
@@ -320,4 +388,69 @@
                                             {:value "111-555-3333"
                                              :type  "other"}]}
             {:op   "remove"
-             :path "phoneNumbers[value co \"-555-\"]"})))))
+             :path "phoneNumbers[value co \"-555-\"]"}))))
+
+  (testing "remove operation: filter on scalar attribute"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:userName "foo"}
+              {:op    "remove"
+               :path  "userName[number eq 1]"})))))
+
+  (testing "remove operation: attrpath filter with subattr"
+    (is (= {:phoneNumbers [{:type "Work" :value "1112223333"}
+                           {:type "Home" :value "3334445555" :display "333-444-5555"}]}
+          (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333" :display "111-222-3333"}
+                                            {:type "Home" :value "3334445555" :display "333-444-5555"}]}
+            {:op    "remove"
+             :path  "phoneNumbers[type eq \"Work\"].display"}))))
+
+  (testing "remove operation: attrpath filter with bad subattr"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {:phoneNumbers [{:type "Work" :value "1112223333"}]}
+              {:op    "remove"
+               :path  "phoneNumbers[type eq \"Work\"].display1"}))))))
+
+;;
+;; negative test cases
+;;
+
+(deftest invalid-operation
+  (testing "unknown operation"
+    (is (= {:status 400 :scimType :invalidSyntax}
+          (get-ex-data
+            (sut/patch schema {} {:op "blah"}))))))
+
+(deftest filter-parse-failure
+  (testing "syntax error in value filter"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {} {:op "add" :path "phoneNumbers[type or value]"}))))))
+
+(deftest multi-valued-attr-in-attr-path
+  (testing "multi-valued attribute in attr path"
+    (is (= {:status 400 :scimType :invalidPath}
+          (get-ex-data
+            (sut/patch schema {} {:op "remove" :path "phoneNumbers.type"}))))))
+
+(deftest scalar-value-for-multi-valued-attr
+  (testing "add operation: scalar value for multi-valued attribute"
+    (is (= {:status 400 :scimType :invalidValue}
+          (get-ex-data
+            (sut/patch schema {} {:op    "add"
+                                  :path  "phoneNumbers"
+                                  :value "blah"}))))))
+
+(deftest filter-unsupported-comparisons
+  (testing "unsupported compare operations"
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:x509Certificates [{:value "foo" :display "bar"}]}
+              {:op   "remove"
+               :path "x509Certificates[value gt \"foo\"]"}))))
+    (is (= {:status 400 :scimType :invalidFilter}
+          (get-ex-data
+            (sut/patch schema {:x509Certificates [{:value "foo" :primary true}]}
+              {:op   "remove"
+               :path "x509Certificates[primary gt false]"}))))))
