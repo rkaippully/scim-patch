@@ -22,10 +22,20 @@
 
 (defn handle-attr-path
   [schema resource uri attr subattr update-fn]
-  (as-> [attr] $
-    (if (s/blank? uri) $ (cons uri $))
-    (if (s/blank? subattr) $ (concat $ [subattr]))
-    (handle-attr-path-levels schema resource update-fn $)))
+  (let [patching-schema   (if (s/blank? uri)
+                            (:id schema)
+                            uri)
+        patchable-schemas (:schemas schema)]
+    (if (or (nil? patching-schema)
+            (nil? patchable-schemas)
+            (some #{patching-schema} patchable-schemas))
+      ;; The schema is patchable
+      (as-> [attr] $
+        (if (s/blank? uri) $ (cons uri $))
+        (if (s/blank? subattr) $ (concat $ [subattr]))
+        (handle-attr-path-levels schema resource update-fn $))
+      ;; The schema isn't patchable, ignore it
+      resource)))
 
 (defn handle-operation
   [schema resource {:keys [path value]} attr-path-fn value-path-fn]

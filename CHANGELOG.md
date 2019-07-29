@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+### Added
+- Allow skipping patches on some schemas (Fixes #6)
 
 ## [0.1.0] — 2019-05-31
-
 ### Added
 - Parse SCIM paths and use it for patching
 - Support add, remove, and replace operations

@@ -3,61 +3,62 @@
             [scim-patch.core :as sut])
   (:import [clojure.lang ExceptionInfo]))
 
-(def schema {:attributes
-             {:userName
-              {:type :string}
+(def schema
+  {:attributes
+   {:userName
+    {:type :string}
 
-              :name
-              {:type
-               {:attributes
-                {:formatted
-                 {:type :string}
-                 :honorificPrefix
-                 {:type         :string
-                  :multi-valued true}}}}
+    :name
+    {:type
+     {:attributes
+      {:formatted
+       {:type :string}
+       :honorificPrefix
+       {:type         :string
+        :multi-valued true}}}}
 
-              :phoneNumbers
-              {:multi-valued true
-               :type
-               {:attributes
-                {:value
-                 {:type :string}
-                 :display
-                 {:type :string}
-                 :type
-                 {:type :string}
-                 :primary
-                 {:type :boolean}
-                 :index
-                 {:type :integer}}}}
+    :phoneNumbers
+    {:multi-valued true
+     :type
+     {:attributes
+      {:value
+       {:type :string}
+       :display
+       {:type :string}
+       :type
+       {:type :string}
+       :primary
+       {:type :boolean}
+       :index
+       {:type :integer}}}}
 
-              :x509Certificates
-              {:multi-valued true
-               :type
-               {:attributes
-                {:value
-                 {:type :binary}
-                 :display
-                 {:type :string}
-                 :primary
-                 {:type :boolean}}}}
+    :x509Certificates
+    {:multi-valued true
+     :type
+     {:attributes
+      {:value
+       {:type :binary}
+       :display
+       {:type :string}
+       :primary
+       {:type :boolean}}}}
 
-              :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
-              {:type
-               {:attributes
-                {:employeeNumber
-                 {:type :string}
-                 :emails
-                 {:type         :string
-                  :multi-valued true}
-                 :manager
-                 {:type
-                  {:attributes
-                   {:displayName
-                    {:type :string}
-                    :emails
-                    {:type         :string
-                     :multi-valued true}}}}}}}}})
+    :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+    {:type
+     {:attributes
+      {:employeeNumber
+       {:type :string}
+       :emails
+       {:type         :string
+        :multi-valued true}
+       :manager
+       {:type
+        {:attributes
+         {:displayName
+          {:type :string}
+          :emails
+          {:type         :string
+           :multi-valued true}}}}}}}}})
 
 (defmacro get-ex-data
   [body]
@@ -714,3 +715,28 @@
             (sut/patch schema {:x509Certificates [{:value "foo" :primary true}]}
               {:op   "remove"
                :path "x509Certificates[primary gt false]"}))))))
+
+
+;;
+;; schema filtering
+;;
+
+(deftest schema-filtering
+  (let [user    {:userName "foo"
+                 :name     {:formatted "bar"}}
+        patch   [{:op    "replace"
+                  :path  "userName"
+                  :value "bar"}
+                 {:op    "replace"
+                  :path  "urn:ietf:params:scim:schemas:core:2.0:Group:displayName"
+                  :value "Administrators"}]
+        schema' (assoc schema
+                  :id "urn:ietf:params:scim:schemas:core:2.0:User"
+                  :schemas ["urn:ietf:params:scim:schemas:core:2.0:User"
+                            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"])]
+    (testing "throws an exception if unknown schema is used"
+      (is (= {:status 400 :scimType :invalidPath}
+            (get-ex-data (sut/patch schema user patch)))))
+    (testing "ignores unknown schema if there is a schema filter"
+      (is (= (assoc user :userName "bar")
+            (sut/patch schema' user patch))))))

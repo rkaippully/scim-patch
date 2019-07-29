@@ -112,6 +112,87 @@ user=> (try
 {:status 400, :scimType :invalidPath}
 ```
 
+You can define a list of schemas you would like to restrict the
+operations to. For example, the below schema declares that the URI of
+the primary schema is "urn:ietf:params:scim:schemas:core:2.0:User" and
+you are only interested in processing patches to
+"urn:ietf:params:scim:schemas:core:2.0:User" and
+"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User".
+
+``` clj
+(def schema
+  {;; the primary schema URI
+   :id      "urn:ietf:params:scim:schemas:core:2.0:User"
+
+   ;; Allowed schemas
+   :schemas ["urn:ietf:params:scim:schemas:core:2.0:User"
+             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
+
+   :attributes
+   {:userName
+    {:type :string}
+
+    :name
+    {:type
+     {:attributes
+      {:formatted
+       {:type :string}
+       :honorificPrefix
+       {:type         :string
+        :multi-valued true}}}}
+
+    :phoneNumbers
+    {:multi-valued true
+     :type
+     {:attributes
+      {:value
+       {:type :string}
+       :display
+       {:type :string}
+       :type
+       {:type :string}
+       :primary
+       {:type :boolean}}}}
+
+    :x509Certificates
+    {:multi-valued true
+     :type
+     {:attributes
+      {:value
+       {:type :binary}
+       :display
+       {:type :string}
+       :primary
+       {:type :boolean}}}}
+
+    :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+    {:type
+     {:attributes
+      {:employeeNumber
+       {:type :string}
+       :manager
+       {:type
+        {:attributes
+         {:displayName
+          {:type :string}}}}}}}}})
+```
+
+The following patch will now pass instead of failing with an invalid path error:
+
+``` clj
+user=> (p/patch schema resource [{:op    "replace"
+                                  :path  "userName"
+                                  :value "bar"}
+                                 {:op    "replace"
+                                  :path  "urn:ietf:params:scim:schemas:core:2.0:Group:displayName"
+                                  :value "Administrators"}])
+{:userName "bar",
+ :phoneNumbers
+ [{:type "work", :value "555-555-1111"}
+  {:type "home", :value "555-555-2222"}]}
+```
+
+
 ## License
 
 Copyright © 2019 Raghu Kaippully <rkaippully@gmail.com> 
