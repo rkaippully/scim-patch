@@ -4,7 +4,7 @@
 [![Clojars Project](https://img.shields.io/clojars/v/org.clojars.rkaippully/scim-patch.svg)](https://clojars.org/org.clojars.rkaippully/scim-patch)
 
 ```clj
-[org.clojars.rkaippully/scim-patch "0.2.0"]
+[org.clojars.rkaippully/scim-patch "0.2.1"]
 ```
 
 A Clojure library that implements patch operations as specified by [SCIM RFC](https://tools.ietf.org/html/rfc7644#section-3.5.2).
