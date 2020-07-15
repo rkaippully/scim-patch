@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
+### Changed
+- Fix issue with "add" when no path is provided #10 (Contributed by @smithtim)
 
 ## [0.2.0] — 2019-07-29
 ### Added
