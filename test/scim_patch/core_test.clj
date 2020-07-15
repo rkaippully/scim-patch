@@ -129,6 +129,7 @@
              :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:emails"
              :value ["test2@example.com"]})))))
 
+
 (deftest op-add-attr-path-level-3
   (testing "add operation, no filter, single valued, level 3"
     (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:displayName "Eddie Brock"}}}
@@ -151,6 +152,23 @@
           (sut/patch schema {} {:op    "add"
                                 :value {:userName "foo"
                                         :name     {:formatted "bar"}}})))))
+
+(deftest op-add-no-path-multivalued
+  (testing "add operation, no path, multivalued"
+    (is (= {:phoneNumbers [{:value "555-555-5555" :type  "work"}
+                           {:value "555-555-4444" :type  "mobile"}]}
+           (sut/patch schema
+                      {:phoneNumbers [{:value "555-555-5555" :type  "work"}]}
+                      {:op "add"
+                       :value {:phoneNumbers [{:value "555-555-4444" :type  "mobile"}]}})))))
+
+(deftest op-add-no-path-nested
+  (testing "add operation, no path"
+    (is (= {:name {:honorificPrefix ["Mr." "Dr."]}}
+           (sut/patch schema
+                      {:name {:honorificPrefix ["Mr."]}}
+                      {:op "add"
+                       :value {:name {:honorificPrefix ["Dr."]}}})))))
 
 (deftest op-add-nonexisting-target-location
   (testing "add operation: If the target location does not exist, the attribute and value are added"

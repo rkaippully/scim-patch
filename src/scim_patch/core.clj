@@ -40,7 +40,11 @@
 (defn handle-operation
   [schema resource {:keys [path value]} attr-path-fn value-path-fn]
   (if (s/blank? path)
-    (merge resource value)
+    ;; no path, so handle each attribute separately
+    (reduce (fn [r [k v]]
+              (handle-operation schema r {:path (name k) :value v} attr-path-fn value-path-fn))
+            resource value)
+    ;; path provided
     (let [[_ xs] (paths/parse path)]
       (case (first xs)
         :attrPath
@@ -62,7 +66,13 @@
       (throw (ex-info "Invalid value for multivalued attribute"
                {:status   400
                 :scimType :invalidValue})))
-    new-val))
+    (if-let [attributes (get-in schema [:type :attributes])]
+      ;; complex attribute
+      (reduce (fn [obj [k v]]
+                (update obj k #(value-for-add (k attributes) % v)))
+              old-val new-val)
+      ;; simple attribute
+      new-val)))
 
 (defn filter-and-add
   [schema new-val value-filter subattr]
