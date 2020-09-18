@@ -4,7 +4,7 @@
   :license {:name "Mozilla Public License v2.0"
             :url  "https://www.mozilla.org/en-US/MPL/2.0/"}
   :dependencies [[instaparse "1.4.10"]
-                 [com.fasterxml.jackson.core/jackson-core "2.11.1"]]
+                 [com.fasterxml.jackson.core/jackson-core "2.11.2"]]
   :plugins [[lein-cloverage "1.0.13"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
