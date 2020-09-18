@@ -11,13 +11,16 @@
   (try
     (let [result (path-parser path)]
       (if (p/failure? result)
-        (throw (ex-info (str "Invalid path: " path) {:status      400
-                                                     :scimType    :invalidPath
-                                                     :parse-error (p/get-failure
-                                                                    result)}))
+        (throw (ex-info (str "Invalid path") {:status      400
+                                              :scimType    :invalidPath
+                                              :parse-error (p/get-failure
+                                                            result)
+                                              :path path}))
         result))
     (catch Exception e
-      (throw (ex-info (str "Invalid path: " path) {:status 400 :scimType :invalidPath} e)))))
+      (throw (ex-info (str "Invalid path") {:status 400
+                                            :scimType :invalidPath
+                                            :path path} e)))))
 
 (defn extract-attr-path
   "Parse attr-path with the following form and extract [uri attr subattr] from it:

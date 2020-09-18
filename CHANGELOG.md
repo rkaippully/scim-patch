@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+- Removed attr path to from exception msg but added :path to exception #12 (contributed by @Quezion)
+- Bugfix to prevent input vectors from being cast to lists in some nested add operations #11 (contributed by @smithtim)
+
 ## [0.2.1] — 2020-07-15
 ### Changed
 - Fix issue with "add" when no path is provided #10 (Contributed by @smithtim)
