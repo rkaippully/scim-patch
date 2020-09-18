@@ -62,7 +62,9 @@
   (if (:multi-valued schema)
     (if (and (sequential? new-val)
           (or (nil? old-val) (sequential? old-val)))
-      (concat old-val new-val)
+      (if (and (vector? new-val) (or (nil? old-val) (vector? old-val)))
+        (vec (concat old-val new-val))
+        (concat old-val new-val))
       (throw (ex-info "Invalid value for multivalued attribute"
                {:status   400
                 :scimType :invalidValue})))
@@ -102,7 +104,8 @@
                        {:status   400
                         :scimType :invalidFilter})))
             (update res (keyword attr)
-              #(doall (map (filter-and-add sch value value-filter subattr) %))))]
+              #(let [mapfn (if (vector? %) mapv map)]
+                (doall (mapfn (filter-and-add sch value value-filter subattr) %)))))]
 
     (handle-operation schema resource opr add-attr-path add-value-path)))
 

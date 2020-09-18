@@ -129,7 +129,6 @@
              :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:emails"
              :value ["test2@example.com"]})))))
 
-
 (deftest op-add-attr-path-level-3
   (testing "add operation, no filter, single valued, level 3"
     (is (= {:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:manager {:displayName "Eddie Brock"}}}
@@ -163,7 +162,7 @@
                        :value {:phoneNumbers [{:value "555-555-4444" :type  "mobile"}]}})))))
 
 (deftest op-add-no-path-nested
-  (testing "add operation, no path"
+  (testing "add operation, no path, nested"
     (is (= {:name {:honorificPrefix ["Mr." "Dr."]}}
            (sut/patch schema
                       {:name {:honorificPrefix ["Mr."]}}
