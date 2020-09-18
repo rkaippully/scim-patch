@@ -1,4 +1,4 @@
-(defproject org.clojars.rkaippully/scim-patch "0.2.1"
+(defproject org.clojars.rkaippully/scim-patch "0.2.2"
   :description "A Clojure library that implements patch operations as specified by RFC7644"
   :url "https://github.com/rkaippully/scim-patch"
   :license {:name "Mozilla Public License v2.0"
