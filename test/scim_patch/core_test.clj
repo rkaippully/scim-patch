@@ -169,6 +169,12 @@
                       {:op "add"
                        :value {:name {:honorificPrefix ["Dr."]}}})))))
 
+(deftest op-add-no-path-or-value
+  (testing "add operation, no path or value"
+    (are [x] (thrown? Exception (sut/patch schema {} x))
+      {:op "add"}
+      {:op "add" :somePath "value"})))
+
 (deftest op-add-nonexisting-target-location
   (testing "add operation: If the target location does not exist, the attribute and value are added"
     (is (= {:userName "foo"
