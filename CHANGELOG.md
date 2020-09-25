@@ -6,8 +6,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-## [0.2.3] - 2020-09-22
 ### Added
 - Check for "value" or "path" key in add patch operations
 
