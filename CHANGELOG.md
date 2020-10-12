@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Check for "value" or "path" key in add patch operations
+- Check for "value" or "path" key in replace patch operations
+- Check for "value" in add patch operations
 
 ## [0.2.2] — 2020-09-18
 
