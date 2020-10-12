@@ -169,7 +169,7 @@
                       {:op "add"
                        :value {:name {:honorificPrefix ["Dr."]}}})))))
 
-(deftest op-add-no-path-or-value
+(deftest ops-add-replace-missing-keys
   (testing "add operation, no path or value"
     (are [x] (= (get-ex-data (sut/patch schema {} x)) {:status 400 :scimType :invalidSyntax})
       {:op "add"}
