@@ -101,7 +101,7 @@
 
 (defn op-add
   [schema resource opr]
-  (when (not (contains? opr :value))
+  (when-not (contains? opr :value)
     (throw (ex-info "Invalid patch keys" {:status 400
                                           :scimType :invalidSyntax})))
   (letfn [(add-attr-path
