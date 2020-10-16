@@ -169,6 +169,15 @@
                       {:op "add"
                        :value {:name {:honorificPrefix ["Dr."]}}})))))
 
+(deftest ops-add-replace-missing-keys
+  (testing "add operation, no path or value"
+    (are [x] (= (get-ex-data (sut/patch schema {} x)) {:status 400 :scimType :invalidSyntax})
+      {:op "add"}
+      {:op "add" :somePath "value"}
+      {:op "add" :path "value"}
+      {:op "replace"}
+      {:op "replace" :something "asdf"})))
+
 (deftest op-add-nonexisting-target-location
   (testing "add operation: If the target location does not exist, the attribute and value are added"
     (is (= {:userName "foo"
@@ -279,7 +288,8 @@
           (get-ex-data
             (sut/patch schema {:x509Certificates [{:primary true}]}
               {:op   "add"
-               :path "x509Certificates[primary co \"true\"]"})))))
+               :path "x509Certificates[primary co \"true\"]"
+               :value ""})))))
 
   (testing "add operation: gt operator"
     (is (= {:phoneNumbers [{:index 1} {:index 2 :display "111-222-3333"}]}
@@ -698,7 +708,7 @@
   (testing "syntax error in value filter"
     (is (= {:status 400 :scimType :invalidPath :path "phoneNumbers[type or value]"}
           (get-ex-data
-            (sut/patch schema {} {:op "add" :path "phoneNumbers[type or value]"}))))))
+            (sut/patch schema {} {:op "add" :path "phoneNumbers[type or value]" :value ""}))))))
 
 (deftest multi-valued-attr-in-attr-path
   (testing "multi-valued attribute in attr path"

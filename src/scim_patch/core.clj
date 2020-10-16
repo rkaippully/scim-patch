@@ -101,6 +101,9 @@
 
 (defn op-add
   [schema resource opr]
+  (when-not (contains? opr :value)
+    (throw (ex-info "Invalid patch keys" {:status 400
+                                          :scimType :invalidSyntax})))
   (letfn [(add-attr-path
             [value res attr sch]
             (try
@@ -195,6 +198,9 @@
 
 (defn op-replace
   [schema resource opr]
+  (when (not-any? #(contains? opr %) [:value :path])
+    (throw (ex-info "Invalid patch keys" {:status 400
+                                          :scimType :invalidSyntax})))
   (letfn [(replace-attr-path
             [value res attr sch]
             (assoc res (keyword attr) (value-for-replace sch value)))
