@@ -5,12 +5,12 @@
             :url  "https://www.mozilla.org/en-US/MPL/2.0/"}
   :dependencies [[instaparse "1.4.10"]
                  [com.fasterxml.jackson.core/jackson-core "2.11.3"]]
-  :plugins [[lein-cloverage "1.0.13"]
+  :plugins [[lein-cloverage "1.2.1"]
             [lein-shell "0.5.0"]
             [lein-ancient "0.6.15"]
             [lein-changelog "0.3.2"]
-            [lein-codox "0.10.6"]
-            [lein-kibit "0.1.6"]]
+            [lein-codox "0.10.7"]
+            [lein-kibit "0.1.8"]]
   :profiles {:dev   [:clj10]
              :clj08 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :clj09 {:dependencies [[org.clojure/clojure "1.9.0"]]}

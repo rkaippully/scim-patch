@@ -1,5 +1,5 @@
 language: clojure
-before_script: lein ancient
+before_script: lein ancient :all
 script:
   - lein kibit
   - lein cloverage --codecov
