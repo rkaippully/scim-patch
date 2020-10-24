@@ -764,6 +764,9 @@
       (is (= {:status 400 :scimType :invalidPath
               :path "urn:ietf:params:scim:schemas:core:2.0:Group:displayName"}
              (get-ex-data (sut/patch schema user patch)))))
+    (testing "throws an exception if told to filter but not given a filter list"
+      (is (= {:status 400 :scimType :invalidSyntax}
+             (get-ex-data (sut/patch schema user patch :skip-unknown-schemas true)))))
     (testing "ignores unknown schema if there is a schema filter"
       (is (= (assoc user :userName "bar")
-            (sut/patch schema' user patch))))))
+             (sut/patch schema' user patch :skip-unknown-schemas true))))))

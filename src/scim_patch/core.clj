@@ -24,13 +24,13 @@
         (update resource attr-key #(handle-attr-path-levels (:type schema') (or % {}) update-fn attrs))))))
 
 (defn handle-attr-path
-  [schema resource uri attr subattr update-fn]
+  [schema resource uri attr subattr skip-unknown? update-fn]
   (let [patching-schema   (if (s/blank? uri)
                             (:id schema)
                             uri)
         patchable-schemas (:schemas schema)]
-    (if (or (nil? patching-schema)
-            (nil? patchable-schemas)
+    (if (or (not skip-unknown?)
+            (nil? patching-schema)
             (some #{patching-schema} patchable-schemas))
       ;; The schema is patchable
       (as-> [attr] $
@@ -41,24 +41,24 @@
       resource)))
 
 (defn handle-operation
-  [schema resource {:keys [path value]} attr-path-fn value-path-fn]
+  [schema resource {:keys [path value]} skip-unknown? attr-path-fn value-path-fn]
   (try
     (if (s/blank? path)
       ;; no path, so handle each attribute separately
       (reduce (fn [r [k v]]
-                (handle-operation schema r {:path (name k) :value v} attr-path-fn value-path-fn))
+                (handle-operation schema r {:path (name k) :value v} skip-unknown? attr-path-fn value-path-fn))
               resource value)
       ;; path provided
       (let [[_ xs] (paths/parse path)]
         (case (first xs)
           :attrPath
           (let [[uri attr subattr] (paths/extract-attr-path xs)]
-            (handle-attr-path schema resource uri attr subattr
+            (handle-attr-path schema resource uri attr subattr skip-unknown?
                               (partial attr-path-fn value)))
           :valuePath
           (let [[_ attr-path value-filter subattr2] xs
                 [uri attr subattr]                  (paths/extract-attr-path attr-path)]
-            (handle-attr-path schema resource uri attr subattr
+            (handle-attr-path schema resource uri attr subattr skip-unknown?
                               (partial value-path-fn value value-filter subattr2))))))
     (catch ExceptionInfo e
       (throw (ex-info (.getMessage e)
@@ -100,7 +100,7 @@
       old-val)))
 
 (defn op-add
-  [schema resource opr]
+  [schema resource opr skip-unknown?]
   (when-not (contains? opr :value)
     (throw (ex-info "Invalid patch keys" {:status 400
                                           :scimType :invalidSyntax})))
@@ -126,7 +126,7 @@
               (catch ExceptionInfo e
                 (throw (ex-info (.getMessage e)
                                 (assoc (ex-data e) :path (:path opr)))))))]
-    (handle-operation schema resource opr add-attr-path add-value-path)))
+    (handle-operation schema resource opr skip-unknown? add-attr-path add-value-path)))
 
 (defn filter-and-remove
   [schema value-filter subattr]
@@ -145,7 +145,7 @@
       (conj acc old-val))))
 
 (defn op-remove
-  [schema resource opr]
+  [schema resource opr skip-unknown?]
   (when (s/blank? (:path opr))
     (throw (ex-info "Missing path for remove operation"
              {:status   400
@@ -166,7 +166,7 @@
                 (dissoc res attr-key)
                 (assoc res attr-key new-val))))]
 
-    (handle-operation schema resource opr remove-attr-path remove-value-path)))
+    (handle-operation schema resource opr skip-unknown? remove-attr-path remove-value-path)))
 
 (defn value-for-replace
   [schema value]
@@ -197,7 +197,7 @@
       {:replaced? replaced? :value (conj value old-val)})))
 
 (defn op-replace
-  [schema resource opr]
+  [schema resource opr skip-unknown?]
   (when (not-any? #(contains? opr %) [:value :path])
     (throw (ex-info "Invalid patch keys" {:status 400
                                           :scimType :invalidSyntax})))
@@ -220,21 +220,24 @@
                             {:status   400
                              :scimType :noTarget}))))))]
 
-    (handle-operation schema resource opr replace-attr-path replace-value-path)))
+    (handle-operation schema resource opr skip-unknown? replace-attr-path replace-value-path)))
 
 (defn patch
-  [schema resource op]
+  [schema resource op & {:keys [skip-unknown-schemas]}]
+  (if (and skip-unknown-schemas (not (:schemas schema)))
+    (throw (ex-info "Option 'skip-unknown-schemas' requires :schemas in schema"
+                    {:status 400 :scimType :invalidSyntax})))
   (cond
     ;; single patch operation
     (map? op)
     (case (:op op)
-      "add"     (op-add schema resource op)
-      "remove"  (op-remove schema resource op)
-      "replace" (op-replace schema resource op)
+      "add"     (op-add schema resource op skip-unknown-schemas)
+      "remove"  (op-remove schema resource op skip-unknown-schemas)
+      "replace" (op-replace schema resource op skip-unknown-schemas)
       (throw (ex-info (str "Invalid operation") {:status 400
                                                  :scimType :invalidSyntax
                                                  :op (:op op)})))
 
     ;; sequence of operations
     (sequential? op)
-    (reduce #(patch schema %1 %2) resource op)))
+    (reduce #(patch schema %1 %2 :skip-unknown-schemas skip-unknown-schemas) resource op)))

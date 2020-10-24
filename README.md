@@ -193,8 +193,15 @@ user=> (p/patch schema resource [{:op    "replace"
 ```
 
 
+## Contributors
+
+- Raghu Kaippully @rkaippully <rkaippully@gmail.com>
+- Tim Smith @smithtim
+- Jason Stiefel @JasonStiefel
+- Quest Yarbrough @Quezion
+
 ## License
 
-Copyright © 2019 Raghu Kaippully <rkaippully@gmail.com> 
+Copyright © 2019-2020, Raghu Kaippully and the scim-patch contributors. 
 
 Distributed under the Mozilla Public License version 2.0.
