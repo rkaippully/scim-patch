@@ -7,8 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 ### Added
-- Check for "value" or "path" key in replace patch operations
-- Check for "value" in add patch operations
+- Check for "value" or "path" key in replace patch operations (#14)
+- Check for "value" in add patch operations (#14)
+- Make skip unknown schemas optional (#15)
 
 ## [0.2.2] — 2020-09-18
 
