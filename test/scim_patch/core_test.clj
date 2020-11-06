@@ -144,6 +144,18 @@
              :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.emails"
              :value ["test1@example.com" "test2@example.com"]})))))
 
+(deftest op-add-extension
+  (testing "add operation, no filter, extension"
+    (let [resource {:userName "foo"
+                    :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "12345"}
+                    :schemas ["urn:ietf:params:scim:schemas:core:2.0:User"
+                              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]}]
+      (is (= resource
+            (sut/patch schema (dissoc resource :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User)
+              {:op    "add"
+               :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+               :value (:urn:ietf:params:scim:schemas:extension:enterprise:2.0:User resource)}))))))
+
 (deftest op-add-no-path
   (testing "add operation, no path"
     (is (= {:userName "foo"
@@ -361,6 +373,17 @@
             {:op   "remove"
              :path "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName"})))))
 
+(deftest op-remove-extension
+  (testing "remove operation: extension"
+    (let [resource {:userName "foo"
+                    :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "12345"}
+                    :schemas ["urn:ietf:params:scim:schemas:core:2.0:User"
+                              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]}]
+      (is (= (dissoc resource :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User)
+             (sut/patch schema resource
+               {:op   "remove"
+                :path "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"}))))))
+
 (deftest op-remove-multi-valued-no-filter
   (testing "remove operation: multi valued attribute, level 1"
     (is (= {:userName "foo"}
@@ -516,6 +539,18 @@
             {:op    "replace"
              :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.emails"
              :value ["test1@example.com" "test2@example.com"]})))))
+
+(deftest op-replace-extension
+  (testing "replace operation, no filter, extension"
+    (let [resource {:userName "foo"
+                    :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "12345"}
+                    :schemas ["urn:ietf:params:scim:schemas:core:2.0:User"
+                              "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]}]
+      (is (= (assoc resource :urn:ietf:params:scim:schemas:extension:enterprise:2.0:User {:employeeNumber "99999"})
+             (sut/patch schema resource
+               {:op    "replace"
+                :path  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+                :value {:employeeNumber "99999"}}))))))
 
 (deftest op-replace-no-path
   (testing "replace operation, no path"

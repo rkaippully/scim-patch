@@ -49,7 +49,9 @@
                 (handle-operation schema r {:path (name k) :value v} skip-unknown? attr-path-fn value-path-fn))
               resource value)
       ;; path provided
-      (let [[_ xs] (paths/parse path)]
+      (let [[_ xs] (if (some #(= % path) (:schemas resource))
+                     [:path [:attrPath path]]
+                     (paths/parse path))]
         (case (first xs)
           :attrPath
           (let [[uri attr subattr] (paths/extract-attr-path xs)]
